@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Collab Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --pink: #D4537E; --pink-l: #FBEAF0; --pink-d: #4B1528;
+    --teal: #1D9E75; --teal-l: #E1F5EE; --teal-d: #085041;
+    --amber: #BA7517; --amber-l: #FAEEDA; --amber-d: #633806;
+    --red: #E24B4A; --red-l: #FCEBEB; --red-d: #501313;
+    --green-l: #EAF3DE; --green-d: #27500A;
+    --bg: #ffffff; --bg2: #f7f7f5; --bg3: #f0efeb;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #9a9a96;
+    --border: rgba(0,0,0,0.10); --border2: rgba(0,0,0,0.18);
+    --radius: 10px; --radius-lg: 14px;
+    --font: 'DM Sans', system-ui, sans-serif;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg3); color: var(--text); min-height: 100vh; }
+
+  .topbar { background: var(--bg); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 10; }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 30px; height: 30px; background: linear-gradient(135deg, #D4537E, #BA7517); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; }
+  .app-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .app-sub { font-size: 12px; color: var(--text3); }
+  .save-status { font-size: 12px; color: var(--text3); }
+
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .metric { background: var(--bg); border-radius: var(--radius); padding: 1rem 1.1rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 5px; font-weight: 500; letter-spacing: .02em; }
+  .metric-val { font-size: 21px; font-weight: 600; color: var(--text); line-height: 1; }
+
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+  .card { background: var(--bg); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; font-size: 11px; color: var(--text2); }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .ldot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+  .tabs { display: flex; gap: 4px; }
+  .tab { font-size: 12px; font-weight: 500; padding: 5px 13px; border-radius: 999px; border: 1px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; transition: all .15s; }
+  .tab:hover { background: var(--bg2); }
+  .tab.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+  .btn { font-size: 13px; font-weight: 500; padding: 7px 16px; border-radius: var(--radius); border: 1px solid var(--border2); background: transparent; color: var(--text); cursor: pointer; transition: all .15s; }
+  .btn:hover { background: var(--bg2); }
+  .btnp { background: var(--pink); color: #fff; border-color: var(--pink); }
+  .btnp:hover { opacity: .88; background: var(--pink); }
+  .btnsm { font-size: 11px; padding: 3px 8px; color: var(--text2); background: none; border: none; cursor: pointer; border-radius: 6px; }
+  .btnsm:hover { background: var(--red-l); color: var(--red); }
+
+  .table-wrap { background: var(--bg); border-radius: var(--radius-lg); box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; margin-bottom: 1.5rem; }
+  .table-hdr { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .tscroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 980px; }
+  th { font-size: 10px; font-weight: 600; color: var(--text2); text-align: left; padding: 8px 11px; border-bottom: 1px solid var(--border); background: var(--bg2); white-space: nowrap; letter-spacing: .04em; text-transform: uppercase; }
+  td { padding: 9px 11px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg2); }
+
+  .badge { display: inline-flex; align-items: center; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; letter-spacing: .02em; }
+  .bg { background: var(--green-l); color: var(--green-d); }
+  .ba { background: var(--amber-l); color: var(--amber-d); }
+  .br { background: var(--red-l); color: var(--red-d); }
+  .bt { background: var(--teal-l); color: var(--teal-d); }
+  .bp { background: var(--pink-l); color: var(--pink-d); }
+  .bgr { background: var(--bg2); color: var(--text2); }
+
+  .empty { text-align: center; padding: 2.5rem; color: var(--text3); font-size: 13px; }
+
+  .inv-list { max-height: 280px; overflow-y: auto; }
+  .inv-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .inv-item:last-child { border-bottom: none; }
+  .inv-thumb { width: 52px; height: 68px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; color: var(--text2); text-align: center; padding: 6px; gap: 2px; }
+  .inv-info { flex: 1; min-width: 0; }
+  .inv-brand { font-size: 13px; font-weight: 600; }
+  .inv-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* Modal */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; align-items: center; justify-content: center; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border2); padding: 1.75rem; width: 560px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; }
+  .fgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .fg { display: flex; flex-direction: column; gap: 5px; }
+  .full { grid-column: 1/-1; }
+  label { font-size: 11px; color: var(--text2); font-weight: 600; letter-spacing: .02em; }
+  input, select, textarea { font-size: 13px; padding: 8px 10px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text); width: 100%; font-family: var(--font); outline: none; transition: border .15s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--pink); }
+  textarea { resize: vertical; min-height: 60px; }
+  .mfoot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
+  @media (max-width: 600px) {
+    .charts-row { grid-template-columns: 1fr; }
+    .fgrid { grid-template-columns: 1fr; }
+    .full { grid-column: 1; }
+    .wrap { padding: 1rem; }
+    .topbar { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.5" fill="white" stroke="none"/></svg>
+    </div>
+    <div>
+      <div class="app-name">Collab Dashboard</div>
+      <div class="app-sub">Instagram brand tracker</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="save-status" id="save-status"></span>
+    <button class="btn btnp" onclick="openAdd()">+ Add collab</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="metrics" id="metrics"></div>
+
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">Payment status</div>
+      <div class="legend" id="leg-pay"></div>
+      <div style="position:relative;height:170px"><canvas id="payChart" role="img" aria-label="Doughnut chart of payment status"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Deliverable status</div>
+      <div class="legend" id="leg-del"></div>
+      <div style="position:relative;height:170px"><canvas id="delChart" role="img" aria-label="Doughnut chart of deliverable status"></canvas></div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('all',this)">All</button>
+      <button class="tab" onclick="setTab('pending',this)">Payment pending</button>
+      <button class="tab" onclick="setTab('invoice',this)">Invoice pending</button>
+      <button class="tab" onclick="setTab('done',this)">Received</button>
+    </div>
+    <span style="font-size:11px;color:var(--text3)" id="collab-count"></span>
+  </div>
+
+  <div class="table-wrap">
+    <div class="tscroll">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Brand</th><th>Deliverable</th><th>Deal (₹)</th><th>Source</th><th>Commission</th><th>Net (₹)</th><th>Status</th><th>Executed</th><th>Invoice</th><th>Due date</th><th>Money</th><th></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="empty-state" class="empty" style="display:none">No collaborations yet. Hit "+ Add collab" to get started.</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-hdr">
+      <div style="font-size:13px;font-weight:600">Invoice copies</div>
+      <div style="font-size:11px;color:var(--text3)">scroll to view all</div>
+    </div>
+    <div class="inv-list" id="inv-list">
+      <div class="empty">No invoices yet. Raise an invoice on a collab to see it here.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title">Add collaboration</div>
+    <div class="fgrid">
+      <div class="fg"><label>Brand name</label><input id="f-brand" placeholder="e.g. Mamaearth"></div>
+      <div class="fg"><label>Source</label><select id="f-source"><option value="">Select</option><option>Direct</option><option>Agency</option><option>Platform</option><option>Referral</option></select></div>
+      <div class="fg full"><label>Deliverable</label><input id="f-del" placeholder="e.g. 1 Reel + 3 Stories"></div>
+      <div class="fg"><label>Deal amount (₹)</label><input id="f-deal" type="number" placeholder="50000"></div>
+      <div class="fg"><label>Commission (%)</label><input id="f-comm" type="number" placeholder="10" min="0" max="100"></div>
+      <div class="fg"><label>Payment timeline</label><select id="f-tl">
+        <option value="15">15–20 working days</option>
+        <option value="30">30 working days</option>
+        <option value="60">60 working days</option>
+        <option value="90">90 working days</option>
+      </select></div>
+      <div class="fg"><label>Status</label><select id="f-status">
+        <option>Active</option><option>Completed</option><option>On Hold</option><option>Cancelled</option>
+      </select></div>
+      <div class="fg"><label>Executed date</label><input id="f-exec" type="date"></div>
+      <div class="fg"><label>Invoice raised</label><select id="f-inv"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+      <div class="fg"><label>Money status</label><select id="f-money">
+        <option value="Pending">Pending</option><option value="Received">Received</option><option value="Partial">Partial</option><option value="Overdue">Overdue</option>
+      </select></div>
+      <div class="fg full"><label>Invoice note / reference</label><textarea id="f-note" placeholder="Invoice #, amount, any notes..."></textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btnp" onclick="saveCollab()">Save collaboration</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'ig_collabs_v3';
+let collabs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let editId = null;
+let activeTab = 'all';
+let payC, delC;
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(collabs));
+  setSaveStatus('Saved');
+  setTimeout(() => setSaveStatus(''), 2000);
+}
+function setSaveStatus(msg) { document.getElementById('save-status').textContent = msg; }
+
+function fmtINR(n) { return '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN'); }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
+function netAmt(c) { return Number(c.deal || 0) - Number(c.deal || 0) * (Number(c.commission || 0) / 100); }
+
+function getDue(c) {
+  if (!c.execDate) return null;
+  let d = new Date(c.execDate); let added = 0; let days = parseInt(c.timeline || 30);
+  while (added < days) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) added++; }
+  return d;
+}
+function isOverdue(c) { let due = getDue(c); return due && new Date() > due && c.moneyStatus !== 'Received'; }
+
+function moneyBadge(c) {
+  if (c.moneyStatus === 'Received') return '<span class="badge bg">Received</span>';
+  if (c.moneyStatus === 'Partial') return '<span class="badge ba">Partial</span>';
+  if (isOverdue(c)) return '<span class="badge br">Overdue</span>';
+  return '<span class="badge bp">Pending</span>';
+}
+function statusBadge(s) {
+  if (s === 'Completed') return '<span class="badge bg">Completed</span>';
+  if (s === 'Active') return '<span class="badge bt">Active</span>';
+  if (s === 'On Hold') return '<span class="badge ba">On Hold</span>';
+  return '<span class="badge bgr">' + s + '</span>';
+}
+function invBadge(v) { return v === 'Yes' ? '<span class="badge bg">Sent</span>' : '<span class="badge ba">Pending</span>'; }
+
+function getFiltered() {
+  if (activeTab === 'all') return collabs;
+  if (activeTab === 'pending') return collabs.filter(c => c.moneyStatus !== 'Received');
+  if (activeTab === 'invoice') return collabs.filter(c => c.invRaised !== 'Yes');
+  if (activeTab === 'done') return collabs.filter(c => c.moneyStatus === 'Received');
+  return collabs;
+}
+
+function render() {
+  let filtered = getFiltered();
+  let tbody = document.getElementById('tbody');
+  document.getElementById('collab-count').textContent = filtered.length + ' collaboration' + (filtered.length !== 1 ? 's' : '');
+
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    document.getElementById('empty-state').style.display = 'block';
+  } else {
+    document.getElementById('empty-state').style.display = 'none';
+    tbody.innerHTML = filtered.map(c => {
+      let i = collabs.indexOf(c);
+      let due = getDue(c);
+      return `<tr>
+        <td style="color:var(--text2)">${i + 1}</td>
+        <td style="font-weight:600">${c.brand || '—'}</td>
+        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.deliverable || ''}">${c.deliverable || '—'}</td>
+        <td>${fmtINR(c.deal)}</td>
+        <td style="color:var(--text2)">${c.source || '—'}</td>
+        <td style="color:var(--text2)">${c.commission || 0}%</td>
+        <td style="font-weight:600">${fmtINR(netAmt(c))}</td>
+        <td>${statusBadge(c.status)}</td>
+        <td style="color:var(--text2)">${fmtDate(c.execDate)}</td>
+        <td>${invBadge(c.invRaised)}</td>
+        <td style="color:${isOverdue(c) ? '#E24B4A' : 'var(--text2)'}">${due ? fmtDate(due) : '—'}</td>
+        <td>${moneyBadge(c)}</td>
+        <td style="white-space:nowrap">
+          <button class="btnsm" onclick="editCollab(${i})">Edit</button>
+          <button class="btnsm" onclick="delCollab(${i})">Del</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  renderMetrics();
+  renderCharts();
+  renderInvoices();
+}
+
+function renderMetrics() {
+  let total = collabs.reduce((s, c) => s + Number(c.deal || 0), 0);
+  let net = collabs.reduce((s, c) => s + netAmt(c), 0);
+  let rcvd = collabs.filter(c => c.moneyStatus === 'Received').reduce((s, c) => s + netAmt(c), 0);
+  let pending = net - rcvd;
+  let invP = collabs.filter(c => c.invRaised !== 'Yes').length;
+  let overdue = collabs.filter(c => isOverdue(c)).length;
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total deal value</div><div class="metric-val">${fmtINR(total)}</div></div>
+    <div class="metric"><div class="metric-label">Net (after commission)</div><div class="metric-val" style="color:var(--pink)">${fmtINR(net)}</div></div>
+    <div class="metric"><div class="metric-label">Received</div><div class="metric-val" style="color:var(--teal)">${fmtINR(rcvd)}</div></div>
+    <div class="metric"><div class="metric-label">Pending</div><div class="metric-val" style="color:var(--amber)">${fmtINR(pending)}</div></div>
+    <div class="metric"><div class="metric-label">Total collabs</div><div class="metric-val">${collabs.length}</div></div>
+    <div class="metric"><div class="metric-label">Invoices pending</div><div class="metric-val" style="color:var(--amber)">${invP}</div></div>
+    <div class="metric"><div class="metric-label">Overdue</div><div class="metric-val" style="color:var(--red)">${overdue}</div></div>
+  `;
+}
+
+function renderCharts() {
+  let rcvd = collabs.filter(c => c.moneyStatus === 'Received').reduce((s, c) => s + netAmt(c), 0);
+  let net = collabs.reduce((s, c) => s + netAmt(c), 0);
+  let pending = net - rcvd;
+  let done = collabs.filter(c => c.status === 'Completed').length;
+  let notDone = collabs.length - done;
+
+  document.getElementById('leg-pay').innerHTML = `
+    <span><span class="ldot" style="background:#1D9E75"></span>Received ${fmtINR(rcvd)}</span>
+    <span><span class="ldot" style="background:#D4537E"></span>Pending ${fmtINR(pending)}</span>`;
+  document.getElementById('leg-del').innerHTML = `
+    <span><span class="ldot" style="background:#1D9E75"></span>Done (${done})</span>
+    <span><span class="ldot" style="background:#BA7517"></span>Pending (${notDone})</span>`;
+
+  if (payC) payC.destroy();
+  if (delC) delC.destroy();
+
+  const mkChart = (id, data, colors, labels) => new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '62%' }
+  });
+
+  payC = mkChart('payChart', [Math.round(rcvd) || 0, Math.round(pending) || 0], ['#1D9E75', '#D4537E'], ['Received', 'Pending']);
+  delC = mkChart('delChart', [done, notDone], ['#1D9E75', '#BA7517'], ['Done', 'Pending']);
+}
+
+function renderInvoices() {
+  let inv = collabs.filter(c => c.invRaised === 'Yes' || c.invNote);
+  let el = document.getElementById('inv-list');
+  if (!inv.length) { el.innerHTML = '<div class="empty">No invoices yet. Raise an invoice on a collab to see it here.</div>'; return; }
+  el.innerHTML = inv.map(c => {
+    let i = collabs.indexOf(c);
+    return `<div class="inv-item">
+      <div class="inv-thumb">
+        <div style="font-size:10px;font-weight:600;color:var(--text)">INV</div>
+        <div style="font-size:9px;color:var(--text2)">${c.brand || 'Brand'}</div>
+        <div style="font-size:9px;font-weight:600;color:var(--pink)">${fmtINR(netAmt(c))}</div>
+      </div>
+      <div class="inv-info">
+        <div class="inv-brand">${c.brand}</div>
+        <div class="inv-meta">${c.deliverable || ''} · Due ${getDue(c) ? fmtDate(getDue(c)) : '—'}</div>
+        ${c.invNote ? `<div style="font-size:11px;color:var(--text2);margin-top:5px;border-left:2px solid #ddd;padding-left:8px">${c.invNote}</div>` : ''}
+        <div style="margin-top:6px;display:flex;gap:6px">${invBadge(c.invRaised)} ${moneyBadge(c)}</div>
+      </div>
+      <button class="btnsm" onclick="editCollab(${i})">Edit</button>
+    </div>`;
+  }).join('');
+}
+
+function setTab(tab, el) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function openAdd() {
+  editId = null;
+  document.getElementById('modal-title').textContent = 'Add collaboration';
+  ['f-brand', 'f-del', 'f-deal', 'f-comm', 'f-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-source').value = '';
+  document.getElementById('f-tl').value = '30';
+  document.getElementById('f-status').value = 'Active';
+  document.getElementById('f-inv').value = 'No';
+  document.getElementById('f-money').value = 'Pending';
+  document.getElementById('f-exec').value = new Date().toISOString().split('T')[0];
+  document.getElementById('overlay').classList.add('open');
+}
+
+function editCollab(idx) {
+  editId = idx;
+  let c = collabs[idx];
+  document.getElementById('modal-title').textContent = 'Edit collaboration';
+  document.getElementById('f-brand').value = c.brand || '';
+  document.getElementById('f-source').value = c.source || '';
+  document.getElementById('f-del').value = c.deliverable || '';
+  document.getElementById('f-deal').value = c.deal || '';
+  document.getElementById('f-comm').value = c.commission || '';
+  document.getElementById('f-tl').value = c.timeline || '30';
+  document.getElementById('f-status').value = c.status || 'Active';
+  document.getElementById('f-exec').value = c.execDate || '';
+  document.getElementById('f-inv').value = c.invRaised || 'No';
+  document.getElementById('f-money').value = c.moneyStatus || 'Pending';
+  document.getElementById('f-note').value = c.invNote || '';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function delCollab(idx) {
+  if (!confirm('Delete this collaboration?')) return;
+  collabs.splice(idx, 1); save(); render();
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+
+function saveCollab() {
+  let brand = document.getElementById('f-brand').value.trim();
+  if (!brand) { alert('Brand name is required.'); return; }
+  let obj = {
+    brand, source: document.getElementById('f-source').value,
+    deliverable: document.getElementById('f-del').value.trim(),
+    deal: parseFloat(document.getElementById('f-deal').value) || 0,
+    commission: parseFloat(document.getElementById('f-comm').value) || 0,
+    timeline: document.getElementById('f-tl').value,
+    status: document.getElementById('f-status').value,
+    execDate: document.getElementById('f-exec').value,
+    invRaised: document.getElementById('f-inv').value,
+    moneyStatus: document.getElementById('f-money').value,
+    invNote: document.getElementById('f-note').value.trim()
+  };
+  if (editId !== null) { collabs[editId] = obj; } else { collabs.push(obj); }
+  save(); closeModal(); render();
+}
+
+render();
+</script>
+</body>
+</html>
